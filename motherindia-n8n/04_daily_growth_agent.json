@@ -1,0 +1,73 @@
+{
+  "name": "Mother India - 04 Daily Growth Agent",
+  "nodes": [
+    {
+      "name": "Growth Input Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -600,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "motherindia-growth-agent",
+        "responseMode": "responseNode"
+      }
+    },
+    {
+      "name": "Prioritize Top 3",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -300,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const x=$json.body||$json,target=10,orders=+x.orders||0,sessions=+x.sessions||0,gap=Math.max(0,target-orders),cvr=sessions?orders/sessions:0,seo=x.seoOpportunities||[],comp=x.competitors||[],a=[]; if(seo.length){const s=[...seo].sort((a,b)=>(b.opportunityScore||0)-(a.opportunityScore||0))[0];a.push({priority:1,channel:'SEO',action:s.action||'Optimize highest-scoring query/page',reason:(s.query||'Top query')+' | position '+(s.position??'n/a')});} if(gap)a.push({priority:2,channel:'Conversion',action:'Improve conversion on highest-traffic Queen Street landing/menu page',reason:'Order gap '+gap+'; CVR '+(cvr*100).toFixed(1)+'%'}); if(comp.length)a.push({priority:3,channel:'Local/Competitor',action:'Review strongest competitor offer/review theme and test a differentiated Queen Street offer',reason:comp[0].competitor||'Top competitor'}); while(a.length<3)a.push({priority:a.length+1,channel:'Retention',action:'Run an approved repeat-order/lunch offer',reason:'Use owned demand'}); return [{json:{date:new Date().toISOString().slice(0,10),location:'Queen Street',target,orders,orderGap:gap,sessions,conversionRate:cvr,topActions:a.slice(0,3)}}];"
+      }
+    },
+    {
+      "name": "Daily Growth Brief",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      }
+    }
+  ],
+  "connections": {
+    "Growth Input Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prioritize Top 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prioritize Top 3": {
+      "main": [
+        [
+          {
+            "node": "Daily Growth Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
