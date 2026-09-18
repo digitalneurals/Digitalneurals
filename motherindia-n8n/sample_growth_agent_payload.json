@@ -1,0 +1,21 @@
+{
+  "locationName": "Queen Street",
+  "dailyOrderTarget": 10,
+  "orders": 7,
+  "sessions": 180,
+  "seoOpportunities": [
+    {
+      "query": "butter chicken toronto",
+      "position": 5.8,
+      "impressions": 1240,
+      "opportunityScore": 155,
+      "action": "Optimize title/meta and strengthen order CTA"
+    }
+  ],
+  "competitors": [
+    {
+      "competitor": "Example Competitor",
+      "opportunityScore": 92
+    }
+  ]
+}
