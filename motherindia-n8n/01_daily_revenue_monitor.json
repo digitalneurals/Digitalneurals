@@ -1,0 +1,54 @@
+{
+  "name": "Mother India - 01 Daily Revenue Monitor",
+  "nodes": [
+    {
+      "name": "Daily 6 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -600,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Config + KPI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -300,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const target=10; const location='Queen Street'; const orders=Number($json.ordersYesterday||0); const sessions=Number($json.sessionsYesterday||0); const revenue=Number($json.revenueYesterday||0); const cvr=sessions?orders/sessions:0; const gap=Math.max(0,target-orders); return [{json:{date:new Date().toISOString().slice(0,10),location,target,orders,sessions,revenue,conversionRate:cvr,averageOrderValue:orders?revenue/orders:0,orderGap:gap,requiredAdditionalSessions:cvr?Math.ceil(gap/cvr):null}}];"
+      }
+    }
+  ],
+  "connections": {
+    "Daily 6 AM": {
+      "main": [
+        [
+          {
+            "node": "Config + KPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
