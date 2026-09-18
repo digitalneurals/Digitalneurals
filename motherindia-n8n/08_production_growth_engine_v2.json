@@ -1,0 +1,326 @@
+{
+  "name": "Mother India - Production Growth Engine v2",
+  "nodes": [
+    {
+      "name": "Daily 6 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1200,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -980,
+        0
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "locationName",
+              "value": "Queen Street",
+              "type": "string"
+            },
+            {
+              "name": "dailyOrderTarget",
+              "value": 10,
+              "type": "number"
+            },
+            {
+              "name": "gaPropertyId",
+              "value": "YOUR_GA4_PROPERTY_ID",
+              "type": "string"
+            },
+            {
+              "name": "gaLocationDimension",
+              "value": "customEvent:store_location",
+              "type": "string"
+            },
+            {
+              "name": "gaLocationValue",
+              "value": "Queen Street",
+              "type": "string"
+            },
+            {
+              "name": "gscSite",
+              "value": "sc-domain:motherindiaroti.ca",
+              "type": "string"
+            },
+            {
+              "name": "ahrefsTarget",
+              "value": "motherindiaroti.ca",
+              "type": "string"
+            },
+            {
+              "name": "ahrefsCountry",
+              "value": "ca",
+              "type": "string"
+            },
+            {
+              "name": "apifyActorId",
+              "value": "YOUR_APIFY_ACTOR_ID",
+              "type": "string"
+            },
+            {
+              "name": "apifySearchQuery",
+              "value": "Indian restaurant Queen Street Toronto",
+              "type": "string"
+            },
+            {
+              "name": "googleSheetId",
+              "value": "YOUR_GOOGLE_SHEET_ID",
+              "type": "string"
+            },
+            {
+              "name": "googleSheetTab",
+              "value": "Daily Growth",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GA4 Yesterday",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -760,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://analyticsdata.googleapis.com/v1beta/properties/{{ $('Config').first().json.gaPropertyId }}:runReport",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { dateRanges:[{startDate:'yesterday',endDate:'yesterday'}], dimensions:[{name:'landingPagePlusQueryString'}], metrics:[{name:'sessions'},{name:'ecommercePurchases'},{name:'purchaseRevenue'}], dimensionFilter:{filter:{fieldName:$('Config').first().json.gaLocationDimension,stringFilter:{matchType:'EXACT',value:$('Config').first().json.gaLocationValue}}}, limit:'10000' } }}"
+      }
+    },
+    {
+      "name": "GSC 28 Days",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -520,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://searchconsole.googleapis.com/webmasters/v3/sites/{{ encodeURIComponent($('Config').first().json.gscSite) }}/searchAnalytics/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { startDate:$now.minus({days:28}).toISODate(), endDate:$now.minus({days:1}).toISODate(), dimensions:['query','page'], rowLimit:25000 } }}"
+      }
+    },
+    {
+      "name": "Ahrefs Organic Keywords",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -280,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.ahrefs.com/v3/site-explorer/organic-keywords",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "target",
+              "value": "={{ $('Config').first().json.ahrefsTarget }}"
+            },
+            {
+              "name": "country",
+              "value": "={{ $('Config').first().json.ahrefsCountry }}"
+            },
+            {
+              "name": "date",
+              "value": "={{ $now.minus({days:1}).toISODate() }}"
+            },
+            {
+              "name": "mode",
+              "value": "subdomains"
+            },
+            {
+              "name": "limit",
+              "value": "250"
+            },
+            {
+              "name": "select",
+              "value": "keyword,best_position,best_position_url,volume,keyword_difficulty,is_transactional,is_commercial,is_local"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Apify Local Competitors",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -40,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.apify.com/v2/actors/{{ $('Config').first().json.apifyActorId }}/run-sync-get-dataset-items?clean=true",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { queries:[$('Config').first().json.apifySearchQuery], maxCrawledPlacesPerSearch:20 } }}",
+        "options": {
+          "timeout": 300000
+        }
+      }
+    },
+    {
+      "name": "Build Daily Growth Brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const cfg=$('Config').first().json;\nconst ga=$('GA4 Yesterday').first().json;\nconst gsc=$('GSC 28 Days').first().json;\nconst ah=$('Ahrefs Organic Keywords').first().json;\nconst apifyItems=$input.all().map(i=>i.json);\n\nlet sessions=0,orders=0,revenue=0;\nfor(const r of (ga.rows||[])){\n  sessions += Number(r.metricValues?.[0]?.value||0);\n  orders += Number(r.metricValues?.[1]?.value||0);\n  revenue += Number(r.metricValues?.[2]?.value||0);\n}\nconst cvr=sessions?orders/sessions:0;\nconst target=Number(cfg.dailyOrderTarget||10);\nconst gap=Math.max(0,target-orders);\n\nconst gscRows=(gsc.rows||[]).map(r=>{\n  const q=r.keys?.[0]||'', page=r.keys?.[1]||'';\n  const impressions=Number(r.impressions||0), clicks=Number(r.clicks||0), ctr=Number(r.ctr||0), pos=Number(r.position||99);\n  const commercial=/(order|delivery|near me|restaurant|takeout|pickup|menu|catering|lunch|dinner|butter chicken|roti|biryani|paneer|tikka)/i.test(q);\n  const score=Math.round((Math.log10(impressions+10)*35 + Math.max(0,.06-ctr)*500 + (pos>=4&&pos<=15?(16-pos)/12*30:5))*(commercial?1.5:1));\n  return {query:q,page,impressions,clicks,ctr,position:pos,commercial,score};\n}).filter(x=>x.impressions>=50).sort((a,b)=>b.score-a.score);\n\nconst ahRows=(ah.keywords||[]).map(k=>({\n  keyword:k.keyword,\n  position:k.best_position,\n  url:k.best_position_url,\n  volume:k.volume,\n  difficulty:k.keyword_difficulty,\n  transactional:k.is_transactional,\n  commercial:k.is_commercial,\n  local:k.is_local\n}));\n\nconst topSeo=gscRows[0]||null;\nconst topAh=ahRows.filter(k=>k.transactional||k.commercial||k.local).sort((a,b)=>(b.volume||0)-(a.volume||0))[0]||null;\nconst topCompetitor=apifyItems[0]||null;\n\nconst actions=[];\nif(topSeo) actions.push({priority:1,channel:'SEO',action:'Optimize the highest-opportunity page/query for CTR and ordering intent',detail:topSeo});\nif(gap>0) actions.push({priority:2,channel:'Conversion',action:'Improve Queen Street landing/menu conversion before adding more traffic',detail:{orderGap:gap,currentCVR:cvr,requiredSessionsAtCurrentCVR:cvr?Math.ceil(gap/cvr):null}});\nif(topAh) actions.push({priority:3,channel:'Ahrefs',action:'Build or strengthen a landing page around a high-intent keyword with measurable demand',detail:topAh});\nif(topCompetitor) actions.push({priority:4,channel:'Local',action:'Review the top local competitor result/review themes and test a differentiated offer',detail:topCompetitor});\n\nreturn [{json:{\n  date:new Date().toISOString().slice(0,10),\n  location:cfg.locationName,\n  targetOrders:target,\n  orders,\n  orderGap:gap,\n  sessions,\n  revenue,\n  conversionRate:cvr,\n  averageOrderValue:orders?revenue/orders:0,\n  topActions:actions.slice(0,3),\n  topGscOpportunities:gscRows.slice(0,10),\n  topAhrefsOpportunities:ahRows.slice(0,10),\n  competitorSample:apifyItems.slice(0,10)\n}}];"
+      }
+    },
+    {
+      "name": "Append Daily Brief to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        500,
+        0
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": "={{ $('Config').first().json.googleSheetId }}",
+        "sheetName": "={{ $('Config').first().json.googleSheetTab }}",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.date }}",
+            "location": "={{ $json.location }}",
+            "target_orders": "={{ $json.targetOrders }}",
+            "orders": "={{ $json.orders }}",
+            "order_gap": "={{ $json.orderGap }}",
+            "sessions": "={{ $json.sessions }}",
+            "revenue": "={{ $json.revenue }}",
+            "conversion_rate": "={{ $json.conversionRate }}",
+            "average_order_value": "={{ $json.averageOrderValue }}",
+            "top_actions_json": "={{ JSON.stringify($json.topActions) }}"
+          }
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Daily 6 AM": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "GA4 Yesterday",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GA4 Yesterday": {
+      "main": [
+        [
+          {
+            "node": "GSC 28 Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GSC 28 Days": {
+      "main": [
+        [
+          {
+            "node": "Ahrefs Organic Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ahrefs Organic Keywords": {
+      "main": [
+        [
+          {
+            "node": "Apify Local Competitors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify Local Competitors": {
+      "main": [
+        [
+          {
+            "node": "Build Daily Growth Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Daily Growth Brief": {
+      "main": [
+        [
+          {
+            "node": "Append Daily Brief to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
