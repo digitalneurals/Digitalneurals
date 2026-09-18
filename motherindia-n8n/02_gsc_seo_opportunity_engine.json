@@ -1,0 +1,83 @@
+{
+  "name": "Mother India - 02 GSC SEO Opportunity Engine",
+  "nodes": [
+    {
+      "name": "Daily 6:15 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -700,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "15 6 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GSC Search Analytics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -400,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://searchconsole.googleapis.com/webmasters/v3/sites/sc-domain%3Amotherindiaroti.ca/searchAnalytics/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { startDate: $now.minus({days:28}).toISODate(), endDate: $now.minus({days:1}).toISODate(), dimensions:['query','page'], rowLimit:25000 } }}"
+      }
+    },
+    {
+      "name": "Score Opportunities",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -100,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const rows=$json.rows||[]; return rows.map(r=>{const q=r.keys?.[0]||'',p=r.keys?.[1]||'',i=+r.impressions||0,c=+r.clicks||0,ctr=+r.ctr||0,pos=+r.position||99,intent=/(order|delivery|near me|restaurant|takeout|pickup|menu|catering|lunch|dinner|butter chicken|roti|biryani|paneer|tikka)/i.test(q)?1.5:1,rank=pos>=4&&pos<=15?(16-pos)/12:.15,score=i<50?0:Math.round((Math.log10(i+10)*35+Math.max(0,.06-ctr)*500+rank*30)*intent);return {json:{query:q,page:p,impressions:i,clicks:c,ctr,position:pos,opportunityScore:score,action:score>=140?'Priority: optimize title/meta and landing page':score>=90?'Improve CTR/content alignment':'Monitor'}}}).filter(x=>x.json.opportunityScore>0).sort((a,b)=>b.json.opportunityScore-a.json.opportunityScore).slice(0,50);"
+      }
+    }
+  ],
+  "connections": {
+    "Daily 6:15 AM": {
+      "main": [
+        [
+          {
+            "node": "GSC Search Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GSC Search Analytics": {
+      "main": [
+        [
+          {
+            "node": "Score Opportunities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
