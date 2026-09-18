@@ -1,0 +1,13 @@
+{
+  "locationName": "Queen Street",
+  "dailyOrderTarget": 10,
+  "gaPropertyId": "YOUR_GA4_PROPERTY_ID",
+  "gaLocationDimension": "customEvent:store_location",
+  "gaLocationValue": "Queen Street",
+  "gscSite": "sc-domain:motherindiaroti.ca",
+  "ahrefsTarget": "motherindiaroti.ca",
+  "ahrefsCountry": "ca",
+  "apifyActorId": "YOUR_APIFY_ACTOR_ID",
+  "googleSheetId": "YOUR_GOOGLE_SHEET_ID",
+  "googleSheetTab": "Daily Growth"
+}
